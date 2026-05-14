@@ -5,11 +5,19 @@
 **GridPulse** is a production-style **home energy tracking platform** built with a microservices architecture to collect power usage events, aggregate consumption metrics, trigger alerts, and expose observability-ready APIs for real-time and historical energy insights.
 
 [![Java](https://img.shields.io/badge/Java-21-blue.svg)]()
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.x-brightgreen.svg)]()
-[![Kafka](https://img.shields.io/badge/Apache%20Kafka-KRaft-black.svg)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.x-6DB33F.svg)]()
+[![Spring AI](https://img.shields.io/badge/Spring%20AI-LLM%20Integration-green.svg)]()
+[![Apache Kafka](https://img.shields.io/badge/Apache%20Kafka-KRaft-black.svg)]()
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)]()
-[![InfluxDB](https://img.shields.io/badge/InfluxDB-2.x-blue.svg)]()
+[![InfluxDB](https://img.shields.io/badge/InfluxDB-2.x-22ADF6.svg)]()
+[![Keycloak](https://img.shields.io/badge/Keycloak-Identity%20%26%20Auth-4D4DFF.svg)]()
+[![Resilience4j](https://img.shields.io/badge/Resilience4j-Circuit%20Breaker-009688.svg)]()
+[![Prometheus](https://img.shields.io/badge/Prometheus-Metrics-E6522C.svg)]()
+[![Grafana](https://img.shields.io/badge/Grafana-Dashboards-F46800.svg)]()
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)]()
+[![Mailpit](https://img.shields.io/badge/Mailpit-Email%20Testing-7B68EE.svg)]()
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-Documentation-85EA2D.svg)]()
+[![Maven](https://img.shields.io/badge/Maven-Build-C71A36.svg)]()
 
 </div>
 
@@ -61,35 +69,82 @@ GridPulse demonstrates that split architecture in a clean, practical form.
 ## Architecture
 
 ```mermaid
-flowchart LR
-    Device[Smart Plug / Meter] --> Gateway[API Gateway]
-    Gateway --> DeviceSvc[Device Service]
-    Gateway --> UsageSvc[Usage Service]
-    Gateway --> AlertSvc[Alert Service]
-    Gateway --> InsightSvc[Insight Service]
+flowchart TB
 
-    DeviceSvc --> Kafka[(Apache Kafka)]
-    UsageSvc --> Kafka
-    AlertSvc --> Kafka
-    InsightSvc --> Kafka
+    %% =========================
+    %% CLEAN MODERN STYLING
+    %% =========================
+    classDef client fill:#f59e0b,stroke:#d97706,color:#fff,stroke-width:2px
+    classDef gateway fill:#2563eb,stroke:#1d4ed8,color:#fff,stroke-width:3px
+    classDef service fill:#0f172a,stroke:#334155,color:#fff,stroke-width:2px
+    classDef kafka fill:#dc2626,stroke:#991b1b,color:#fff,stroke-width:3px
+    classDef db fill:#059669,stroke:#047857,color:#fff,stroke-width:2px
+    classDef infra fill:#7c3aed,stroke:#6d28d9,color:#fff,stroke-width:2px
+    classDef ai fill:#ec4899,stroke:#be185d,color:#fff,stroke-width:2px
 
+    %% =========================
+    %% ENTRY
+    %% =========================
+    User[👤 User / Dashboard]:::client
+    Device[🔌 Smart Plug / Meter]:::client
+
+    Gateway[🌐 API Gateway<br/>:9000]:::gateway
+
+    User --> Gateway
+    Device --> Gateway
+
+    %% =========================
+    %% SERVICES
+    %% =========================
+    UserSvc[👤 User Service<br/>:8080]:::service
+    DeviceSvc[📟 Device Service<br/>:8081]:::service
+    IngestionSvc[📥 Ingestion Service<br/>:8082]:::service
+    UsageSvc[⚡ Usage Service<br/>:8083]:::service
+    AlertSvc[🚨 Alert Service<br/>:8084]:::service
+    InsightSvc[🧠 Insight Service<br/>:8085]:::service
+
+    Gateway --> UserSvc
+    Gateway --> DeviceSvc
+    Gateway --> IngestionSvc
+    Gateway --> UsageSvc
+    Gateway --> AlertSvc
+    Gateway --> InsightSvc
+
+    %% =========================
+    %% STREAMING
+    %% =========================
+    Kafka[(🔥 Apache Kafka)]:::kafka
+
+    IngestionSvc --> Kafka
     Kafka --> UsageSvc
+    UsageSvc --> Kafka
     Kafka --> AlertSvc
-    Kafka --> NotificationSvc[Notification Service]
 
-    UsageSvc --> Influx[(InfluxDB 2)]
-    DeviceSvc --> MySQL[(MySQL 8)]
+    %% =========================
+    %% STORAGE
+    %% =========================
+    MySQL[(🛢️ MySQL)]:::db
+    Influx[(📈 InfluxDB)]:::db
+    Mailpit[(✉️ Mailpit)]:::db
+
+    UserSvc --> MySQL
+    DeviceSvc --> MySQL
     AlertSvc --> MySQL
-    InsightSvc --> MySQL
 
-    Gateway --> Keycloak[Keycloak]
-    Gateway --> OpenAPI[Aggregated OpenAPI Docs]
+    UsageSvc --> Influx
+    AlertSvc --> Mailpit
 
-    NotificationSvc --> Mailpit[Mailpit]
-    UsageSvc --> Prom[Prometheus]
-    AlertSvc --> Prom
-    Gateway --> Prom
-    Prom --> Grafana[Grafana]
+    %% =========================
+    %% PLATFORM
+    %% =========================
+    Keycloak[🔐 Keycloak]:::infra
+    Prom[📡 Prometheus]:::infra
+    Grafana[📊 Grafana]:::infra
+    Ollama[🤖 Ollama]:::ai
+
+    Gateway -. Auth .-> Keycloak
+    Prom --> Grafana
+    InsightSvc -. AI .-> Ollama
 ```
 
 ---
@@ -118,31 +173,159 @@ flowchart LR
 
 ## Services
 
-> Replace these names with the exact services in your repository if they differ.
+<table>
+<tr>
+<td width="50%">
 
-### API Gateway
-Single public entry point for all HTTP traffic. Handles routing, JWT validation, and OpenAPI aggregation.
+### 🌐 API Gateway
+> **Port:** `9000`
 
-### Device Service
-Manages device registration, metadata, ownership, and device status.
+Acts as the single public entry point for all incoming HTTP traffic and centralizes request routing across internal services.
 
-### Usage Service
-Consumes power readings, aggregates usage, and persists time-series measurements to InfluxDB.
+**Responsibilities**
+- Request routing and aggregation  
+- JWT validation using OAuth2 Resource Server  
+- Circuit breakers with Resilience4j  
+- Aggregated OpenAPI documentation
 
-### Alert Service
-Evaluates thresholds and triggers alert workflows when consumption exceeds configured limits.
+**Technologies**
+`Spring Boot 4` `Spring Cloud Gateway` `Resilience4j` `OAuth2 Resource Server`
 
-### Insight Service
-Uses Spring AI to generate summaries, recommendations, or energy efficiency insights.
+</td>
 
-### Notification Service
-Sends notifications such as email alerts through local Mailpit in development.
+<td width="50%">
 
-### Keycloak Integration
-Provides local identity and access management with JWT-based authentication.
+### 📟 Device Service
+> **Port:** `8081`
 
-### Observability Stack
-Exposes metrics through Micrometer, Prometheus, and Grafana dashboards.
+Responsible for managing smart devices connected to the platform, including registration, ownership mapping, metadata storage, and lifecycle status management.
+
+**Responsibilities**
+- Device registration  
+- Metadata & ownership management  
+- Device lifecycle tracking  
+- Configuration APIs
+
+**Technologies**
+`Spring Boot 4` `JPA` `MySQL` `Flyway`
+
+</td>
+</tr>
+
+<tr>
+<td width="50%">
+
+### ⚡ Usage Service
+> **Port:** `8083`
+
+Processes incoming energy consumption readings from the streaming pipeline and performs aggregation, threshold analysis, and time-series persistence.
+
+**Responsibilities**
+- Consume Kafka energy events  
+- Usage aggregation  
+- Threshold evaluation  
+- Store metrics in InfluxDB
+
+**Technologies**
+`Spring Boot 4` `Kafka` `InfluxDB` `Micrometer`
+
+</td>
+
+<td width="50%">
+
+### 🚨 Alert Service
+> **Port:** `8084`
+
+Monitors processed consumption events and evaluates predefined thresholds or abnormal usage patterns.
+
+**Responsibilities**
+- Threshold monitoring  
+- Alert generation  
+- Notification orchestration  
+- Alert persistence
+
+**Technologies**
+`Spring Boot 4` `Kafka` `JPA` `Mail` `MySQL`
+
+</td>
+</tr>
+
+<tr>
+<td width="50%">
+
+### 🧠 Insight Service
+> **Port:** `8085`
+
+Provides intelligent energy usage insights using Spring AI and optional Ollama integration.
+
+**Responsibilities**
+- Energy consumption summaries  
+- AI-powered recommendations  
+- Usage anomaly explanations  
+- Natural language insights
+
+**Technologies**
+`Spring AI` `Ollama` `Spring Boot`
+
+</td>
+
+<td width="50%">
+
+### 📨 Notification Service
+> **Internal Service**
+
+Handles outbound communication workflows such as alerts, warnings, and energy notifications.
+
+**Responsibilities**
+- Email notifications  
+- Alert communication  
+- Mailpit integration (local)  
+- Extensible notification design
+
+**Technologies**
+`Spring Mail` `Kafka` `Mailpit`
+
+</td>
+</tr>
+
+<tr>
+<td width="50%">
+
+### 🔐 Keycloak Integration
+> **Authentication Layer**
+
+Provides authentication and identity management using JWT-based security.
+
+**Responsibilities**
+- Identity management  
+- OAuth2 authentication  
+- Role-based authorization  
+- JWT token validation
+
+**Technologies**
+`Keycloak` `OAuth2` `JWT`
+
+</td>
+
+<td width="50%">
+
+### 📊 Observability Stack
+> **Monitoring Layer**
+
+Implements production-style monitoring and diagnostics for operational visibility.
+
+**Responsibilities**
+- Metrics collection  
+- JVM & health monitoring  
+- Dashboard visualization  
+- Performance observability
+
+**Technologies**
+`Spring Actuator` `Micrometer` `Prometheus` `Grafana`
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -172,21 +355,6 @@ Exposes metrics through Micrometer, Prometheus, and Grafana dashboards.
 6. The Alert Service evaluates thresholds.
 7. Notification workflows are triggered when needed.
 8. Prometheus scrapes metrics and Grafana visualizes system health.
-
----
-
-## API Highlights
-
-> Update these endpoints to match your implementation.
-
-```http
-POST   /api/devices
-GET    /api/devices/{deviceId}
-POST   /api/energy/readings
-GET    /api/usage/{deviceId}
-POST   /api/alerts/config
-GET    /api/insights/{deviceId}
-```
 
 ---
 
@@ -278,67 +446,37 @@ Structured logs make tracing event flow and debugging service interactions easie
 
 ```txt
 gridpulse/
+├── alert-service/
 ├── api-gateway/
 ├── device-service/
-├── usage-service/
-├── alert-service/
+├── infra/
 ├── insight-service/
 ├── notification-service/
-├── docker/
-├── docs/
+├── usage-service/
+├── user-service/
 ├── docker-compose.yml
 └── README.md
 ```
 
 ---
 
-## Future Enhancements
+🧑‍💻 Author
 
-- Real-time WebSocket dashboard updates
-- Multi-tenant household support
-- Advanced forecasting and anomaly detection
-- Cost estimation by tariff plan
-- Exportable monthly billing reports
-- Distributed tracing with OpenTelemetry
-- Dead-letter queue handling for Kafka failures
-- Rate limiting and request quota controls
+Ayush Gupta
+💼 GitHub: https://github.com/Brew-and-Bugs-with-Ayush
 
----
+🌐 LinkedIn: https://www.linkedin.com/in/ayush-gupta004
 
-## Screenshots
+📧 Email: ayushgupta.Codex@gmail.com
 
-Add screenshots here to increase credibility and GitHub discoverability.
+📝 License
 
-- Gateway Swagger UI
-- Grafana dashboards
-- Kafka UI topics
-- Keycloak login screen
-- Energy usage charts
-- Alert notification sample
+This project is licensed under the MIT License — feel free to use, learn, and build upon it.
 
 ---
 
-## Why This Project Stands Out
+🌟 Support
 
-GridPulse is not a basic CRUD backend. It demonstrates architecture decisions that map to production systems:
+If you find this project helpful, please ⭐ star the repository — it helps others discover it and motivates continued development!
 
-- stream processing over synchronous coupling
-- specialized storage per workload
-- secure gateway-centric access
-- resilience and observability by default
-- practical energy-domain modeling
-- extensibility for AI-driven insights
-
-This makes it suitable for backend, distributed systems, and platform engineering portfolios.
-
----
-
-## License
-
-Add your preferred license here.
-
----
-
-## Contact
-
-Add your GitHub profile, LinkedIn, or portfolio link here.
+“Code. Build. Flow. — That’s GridPulse.” 🚀
