@@ -27,3 +27,4 @@ public class Alert {
     private LocalDateTime createdAt;
     private boolean sent;
 }
+
