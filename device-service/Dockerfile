@@ -4,9 +4,7 @@ FROM eclipse-temurin:21-jdk AS builder
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy Maven Wrapper files and Maven configuration
-COPY .mvn .mvn
-COPY mvnw .
+# Copy Maven configuration
 COPY pom.xml .
 
 # Give execute permission to Maven Wrapper
