@@ -1,39 +1,33 @@
-# Stage 1: Build the application
-FROM maven:3.9.9-eclipse-temurin-21-alpine AS builder
+# Use Eclipse Temurin JDK 21 image for compiling the application
+FROM eclipse-temurin:21-jdk AS builder
 
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy Maven wrapper files for dependency caching
+# Copy Maven Wrapper files and Maven configuration
 COPY .mvn .mvn
 COPY mvnw .
 COPY pom.xml .
 
-# Give execute permission
+# Give execute permission to Maven Wrapper
 RUN chmod +x mvnw
 
-# Download dependencies first (better Docker cache)
-RUN ./mvnw dependency:go-offline
-
-# Copy source code
+# Copy the application source code
 COPY src ./src
 
-# Build jar
+# Build the Spring Boot application and create the JAR file
+# -DskipTests skips running tests during the build process
 RUN ./mvnw clean package -DskipTests
 
 
-# ==============================
-# Stage 2: Lightweight runtime
-# ==============================
-FROM eclipse-temurin:21-jre-alpine
+# Use a lightweight JRE image since only the compiled application needs to run
+FROM eclipse-temurin:21-jre
 
+# Set the working directory inside the runtime container
 WORKDIR /app
 
-# Copy built jar
+# Copy the generated JAR file from the build stage
 COPY --from=builder /app/target/*.jar app.jar
 
-# JVM optimization for containers
-ENTRYPOINT ["java", \
-"-XX:+UseContainerSupport", \
-"-XX:MaxRAMPercentage=85.0", \
-"-jar", \
-"app.jar"]
+# Start the Spring Boot application when the container launches
+ENTRYPOINT ["java", "-jar", "app.jar"]
