@@ -21,7 +21,7 @@ public class InsightServiceRoutes {
     public RouterFunction<ServerResponse> insightRoute() {
         return route("insight-service")
                 .route(RequestPredicates.path("/api/v1/insight/**"), http())
-                .before(uri("http://localhost:8085"))
+                .before(uri("http://insight-service:8085"))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
                         "insightServiceCircuitBreaker",
                         URI.create("forward:/fallbackRoute")
