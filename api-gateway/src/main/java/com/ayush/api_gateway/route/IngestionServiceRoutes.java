@@ -21,7 +21,7 @@ public class IngestionServiceRoutes {
     public RouterFunction<ServerResponse> ingestionRoute() {
         return route("ingestion-service")
                 .route(RequestPredicates.path("/api/v1/ingestion/**"), http())
-                .before(uri("http://localhost:8082"))
+                .before(uri("http://ingestion-service:8082"))
                 .filter(CircuitBreakerFilterFunctions.circuitBreaker(
                         "ingestionServiceCircuitBreaker",
                         URI.create("forward:/fallbackRoute")
