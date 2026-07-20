@@ -29,7 +29,7 @@ public class OpenApiConfig {
 
     private static Contact getContact() {
         Contact contact = new Contact();
-        contact.setUrl("https://ayushbrewfolio.netlify.app/");
+        contact.setUrl("https://brew-ayush-and-portfolio.vercel.app/");
         contact.setEmail("ayushgupta.codex@gmail.com");
         return contact;
     }

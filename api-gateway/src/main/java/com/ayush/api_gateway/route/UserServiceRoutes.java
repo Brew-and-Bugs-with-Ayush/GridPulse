@@ -46,7 +46,7 @@ public class UserServiceRoutes {
         return GatewayRouterFunctions.route("user-service-api-docs")
                 .route(RequestPredicates.path("/docs/user-service/v3/api-docs"),
                         http())
-                .before(uri("http://user-service:8080"))
+                .before(uri("http://localhost:8080"))
                 .filter(setPath("/v3/api-docs"))
                 .build();
     }
